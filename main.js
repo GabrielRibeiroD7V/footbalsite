@@ -1,9 +1,8 @@
 const scenes = [...document.querySelectorAll('.scene')];
 const nav = [...document.querySelectorAll('.progress a')];
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-// Longer shots receive more scroll distance; short shots retain enough room for touch gestures.
-const PIXELS_PER_SECOND = 220;
-const MIN_SCRUB_VIEWPORTS = 0.65;
+// Equal gesture distance for every scene, independent of video duration.
+const SCRUB_VIEWPORTS = 1.2;
 const MIN_TRANSITION_PX = 48;
 const MAX_TRANSITION_PX = 80;
 let scheduled = false;
@@ -47,20 +46,20 @@ scenes.forEach((scene, sceneIndex) => {
 
 function updateText(scene, progress, closingProgress) {
   const still = reducedMotion.matches;
-  const exit = still ? (progress >= 0.94 ? 0 : 1) : 1 - ramp(progress, 0.76, 0.94);
+  const exit = still ? (progress >= 0.97 ? 0 : 1) : 1 - ramp(progress, 0.84, 0.97);
   const sceneIndex = scenes.indexOf(scene);
   const mobileScale = window.innerWidth <= 700 ? 0.48 : 1;
   scene.querySelectorAll('.title-part').forEach((part, index) => {
     const [x,y,z,rotation,outX,outY] = choreography[sceneIndex][index];
-    const start = index * 0.025 + (sceneIndex === 2 ? 0.015 : 0);
-    const enter = still ? 1 : ramp(progress, start, 0.19 + start);
+    const start = index * 0.02 + (sceneIndex === 2 ? 0.01 : 0);
+    const enter = still ? 1 : ramp(progress, start, 0.16 + start);
     const leaving = still ? 0 : 1 - exit;
     part.style.opacity = String(enter * exit);
     part.style.transform = `translate3d(${((1-enter)*x + leaving*outX)*mobileScale}px, ${((1-enter)*y + leaving*outY)*mobileScale}px, ${(1-enter)*z}px) rotate(${((1-enter)*rotation + leaving*rotation*.5)}deg) scale(${1-(1-enter)*.12})`;
     part.style.clipPath = still ? 'none' : `inset(0 ${index % 2 ? 0 : (1-enter)*35}% ${(1-enter)*18}% ${index % 2 ? (1-enter)*35 : 0}%)`;
   });
   const caption = scene.querySelector('.scene__content p');
-  const captionEnter = still ? 1 : ramp(progress, 0.29, 0.38);
+  const captionEnter = still ? 1 : ramp(progress, 0.24, 0.30);
   caption.style.opacity = String(captionEnter * exit);
   caption.style.transform = `translateY(${still ? 0 : (1 - captionEnter) * 10 - (1 - exit) * 8}px)`;
   scene.querySelectorAll('.scene__eyebrow, .scroll-cue, .replay').forEach((item) => {
@@ -81,18 +80,13 @@ function layoutScenes() {
   const viewport = window.innerHeight;
 
   scenes.forEach((scene, index) => {
-    const video = scene.querySelector('video');
-    const fallbackDuration = Number(scene.dataset.duration);
-    const duration = Number.isFinite(video.duration) ? video.duration : fallbackDuration;
-    const scrubDistance = Math.round(Math.max(viewport * MIN_SCRUB_VIEWPORTS, duration * PIXELS_PER_SECOND));
-    const transitionDistance = index === scenes.length - 1
-      ? 0
-      : Math.round(clamp(viewport * 0.12, MIN_TRANSITION_PX, MAX_TRANSITION_PX));
+    const scrubDistance = Math.round(viewport * SCRUB_VIEWPORTS);
+    const transitionDistance = Math.round(clamp(viewport * 0.12, MIN_TRANSITION_PX, MAX_TRANSITION_PX));
 
     scene.dataset.scrubDistance = String(scrubDistance);
     scene.dataset.transitionDistance = String(transitionDistance);
-    // A short closing scroll reveals the credit after the final video frame.
-    scene.style.height = `${scrubDistance + transitionDistance + (index === scenes.length - 1 ? 180 : 0)}px`;
+    // The final scene uses its transition distance to reveal the signature.
+    scene.style.height = `${scrubDistance + transitionDistance}px`;
   });
 }
 
@@ -157,7 +151,7 @@ function update() {
     scene.classList.toggle('is-visible', isCurrent || isNext);
     scene.classList.toggle('is-active', isCurrent);
     const sceneProgress = clamp((y - scene.offsetTop) / Number(scene.dataset.scrubDistance), 0, 1);
-    const closingProgress = clamp((y - scene.offsetTop - Number(scene.dataset.scrubDistance)) / 180, 0, 1);
+    const closingProgress = clamp((y - scene.offsetTop - Number(scene.dataset.scrubDistance)) / Number(scene.dataset.transitionDistance), 0, 1);
     updateText(scene, sceneProgress, closingProgress);
   });
 
