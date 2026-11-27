@@ -163,7 +163,7 @@ function update() {
     const isNext = index === currentIndex + 1 && transitionProgress > 0;
     // Workshop -> pitch passes through shadow. On-pitch edits reveal the next shot
     // spatially, keeping the field present instead of fading the whole image to black.
-    const shadowTransition = currentIndex === 0;
+    const shadowTransition = currentIndex === 0 || reducedMotion.matches;
     const opacity = isCurrent
       ? (next && shadowTransition ? 1 - ramp(transitionProgress, 0, 0.5) : 1)
       : isNext ? (shadowTransition ? ramp(transitionProgress, 0.5, 1) : 1) : 0;
