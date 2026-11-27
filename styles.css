@@ -6,7 +6,7 @@
 .scene__stage{position:sticky;top:0;height:100svh;display:flex;align-items:flex-end;isolation:isolate;overflow:hidden;background:#080b0c}
 @media(max-width:700px){.scene{height:220svh;min-height:0}.scene__stage{align-items:flex-end}}
 .intro{display:none}
-.scene,.scene:where(:not(:first-child)){height:100svh;min-height:0}
+.scene,.scene:where(:not(:first-child)){position:static;isolation:auto;overflow:visible;height:100svh;min-height:0}
 .story::after{content:'';display:block;height:100svh}
 .scene__stage{position:fixed;inset:0;z-index:1;width:100%;height:100svh;visibility:hidden;pointer-events:none}
 .scene.is-active .scene__stage{visibility:visible;pointer-events:auto}
