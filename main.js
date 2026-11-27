@@ -145,8 +145,11 @@ function update() {
   scenes.forEach((scene, index) => {
     const isCurrent = index === currentIndex;
     const isNext = index === currentIndex + 1 && transitionProgress > 0;
-    // Incoming opaque stage fades over the outgoing stage, avoiding a dark dip.
-    const opacity = isCurrent ? 1 : isNext ? transitionProgress : 0;
+    // Fade through the page's dark background instead of superimposing unrelated shots.
+    // The closing scene keeps its final frame while the signature appears.
+    const opacity = isCurrent
+      ? (next ? 1 - ramp(transitionProgress, 0, 0.5) : 1)
+      : isNext ? ramp(transitionProgress, 0.5, 1) : 0;
     scene.style.setProperty('--scene-opacity', String(opacity));
     scene.classList.toggle('is-visible', isCurrent || isNext);
     scene.classList.toggle('is-active', isCurrent);
