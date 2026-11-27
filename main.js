@@ -8,27 +8,29 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 function update() {
   scheduled = false;
   const viewport = window.innerHeight;
-  const center = window.scrollY + viewport / 2;
+  const y = window.scrollY;
   let current = scenes[0];
+  scenes.forEach((scene) => {
+    if (y >= scene.offsetTop) current = scene;
+  });
 
   scenes.forEach((scene) => {
     const top = scene.offsetTop;
-    const range = Math.max(1, scene.offsetHeight - viewport);
+    const range = Math.max(1, scene.offsetHeight);
     const video = scene.querySelector('video');
-    const progress = clamp((window.scrollY - top) / range, 0, 1);
+    const progress = clamp((y - top) / range, 0, 1);
 
-    if (center >= top && center < top + scene.offsetHeight) current = scene;
     if (reducedMotion.matches) return;
 
     // Scroll owns the playhead. Scrolling back reverses the shot.
-    if (window.scrollY + viewport * 2 >= top && window.scrollY < top + scene.offsetHeight) {
+    if (y + viewport * 2 >= top && y < top + scene.offsetHeight && (scene === current || scene === scenes[scenes.indexOf(current) + 1])) {
       if (video.preload === 'none') video.preload = 'auto';
       if (!video.dataset.loadRequested) {
         video.dataset.loadRequested = 'true';
         video.load();
       }
     }
-    if (video.readyState >= 1 && Number.isFinite(video.duration)) {
+    if (scene === current && video.readyState >= 1 && Number.isFinite(video.duration)) {
       const frame = 1 / 24;
       const target = clamp(progress * video.duration, 0, Math.max(0, video.duration - frame));
       if (Math.abs(video.currentTime - target) > frame / 2) video.currentTime = target;
