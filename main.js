@@ -1,41 +1,60 @@
 const scenes = [...document.querySelectorAll('.scene')];
 const nav = [...document.querySelectorAll('.progress a')];
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let scheduled = false;
 
-function activate(scene) {
-  scenes.forEach((item) => {
-    const active = item === scene;
-    item.classList.toggle('is-active', active);
-    const video = item.querySelector('video');
-    if (active && !reducedMotion.matches) {
-      if (video.readyState === 0) video.load();
-      if (video.ended) video.currentTime = 0;
-      video.play().catch(() => {});
-    } else video.pause();
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+function update() {
+  scheduled = false;
+  const viewport = window.innerHeight;
+  const center = window.scrollY + viewport / 2;
+  let current = scenes[0];
+
+  scenes.forEach((scene) => {
+    const top = scene.offsetTop;
+    const range = Math.max(1, scene.offsetHeight - viewport);
+    const video = scene.querySelector('video');
+    const progress = clamp((window.scrollY - top) / range, 0, 1);
+
+    if (center >= top && center < top + scene.offsetHeight) current = scene;
+    if (reducedMotion.matches) return;
+
+    // Scroll owns the playhead. Scrolling back reverses the shot.
+    if (window.scrollY + viewport * 2 >= top && window.scrollY < top + scene.offsetHeight) {
+      if (video.preload === 'none') video.preload = 'auto';
+      if (!video.dataset.loadRequested) {
+        video.dataset.loadRequested = 'true';
+        video.load();
+      }
+    }
+    if (video.readyState >= 1 && Number.isFinite(video.duration)) {
+      const frame = 1 / 24;
+      const target = clamp(progress * video.duration, 0, Math.max(0, video.duration - frame));
+      if (Math.abs(video.currentTime - target) > frame / 2) video.currentTime = target;
+    }
   });
+
+  scenes.forEach((scene) => scene.classList.toggle('is-active', scene === current));
   nav.forEach((link) => {
-    if (link.hash === `#${scene.id}`) link.setAttribute('aria-current', 'step');
+    if (link.hash === `#${current.id}`) link.setAttribute('aria-current', 'step');
     else link.removeAttribute('aria-current');
   });
 }
 
-const observer = new IntersectionObserver((entries) => {
-  const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-  if (visible[0]) activate(visible[0].target);
-}, { threshold: [0, .25, .5, .75, 1] });
-scenes.forEach((scene) => observer.observe(scene));
+function schedule() {
+  if (!scheduled) {
+    scheduled = true;
+    requestAnimationFrame(update);
+  }
+}
 
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) scenes.forEach((scene) => scene.querySelector('video').pause());
-  else {
-    const current = scenes.find((scene) => scene.classList.contains('is-active'));
-    if (current && !reducedMotion.matches) current.querySelector('video').play().catch(() => {});
-  }
+scenes.forEach((scene) => {
+  const video = scene.querySelector('video');
+  video.pause();
+  video.addEventListener('loadedmetadata', schedule);
 });
-reducedMotion.addEventListener('change', () => {
-  if (reducedMotion.matches) scenes.forEach((scene) => scene.querySelector('video').pause());
-  else {
-    const current = scenes.find((scene) => scene.classList.contains('is-active'));
-    if (current) current.querySelector('video').play().catch(() => {});
-  }
-});
+window.addEventListener('scroll', schedule, { passive: true });
+window.addEventListener('resize', schedule);
+reducedMotion.addEventListener('change', schedule);
+schedule();
