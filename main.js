@@ -170,7 +170,7 @@ function update() {
     scene.style.setProperty('--scene-opacity', String(opacity));
     const reveal = ramp(transitionProgress, 0, 1);
     scene.querySelector('.scene__stage').style.clipPath = isNext && !shadowTransition
-      ? (currentIndex === 1 ? `inset(${(1-reveal)*100}% 0 0 0)` : `inset(0 0 0 ${(1-reveal)*100}%)`)
+      ? (currentIndex === 1 ? `inset(0 ${(1-reveal)*100}% 0 0)` : `inset(0 0 0 ${(1-reveal)*100}%)`)
       : 'none';
     scene.classList.toggle('is-visible', isCurrent || isNext);
     scene.classList.toggle('is-active', isCurrent);
