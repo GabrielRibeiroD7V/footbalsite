@@ -29,7 +29,7 @@ const titleLines = [
 ];
 scenes.forEach((scene, sceneIndex) => {
   const heading = scene.querySelector('h1, h2');
-  heading.setAttribute('aria-label', heading.textContent);
+  heading.setAttribute('aria-label', titleLines[sceneIndex].flat().join(' '));
   heading.replaceChildren();
   titleLines[sceneIndex].forEach((words, lineIndex) => {
     const line = document.createElement(lineIndex ? 'em' : 'span');
