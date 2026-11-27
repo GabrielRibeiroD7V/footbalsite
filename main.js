@@ -26,16 +26,16 @@ scenes.forEach((scene) => {
 
 function updateText(scene, progress, closingProgress) {
   const still = reducedMotion.matches;
-  const exit = still ? 1 : 1 - ramp(progress, 0.76, 0.94);
+  const exit = still ? (progress >= 0.94 ? 0 : 1) : 1 - ramp(progress, 0.76, 0.94);
   scene.querySelectorAll('.title-part').forEach((part, index) => {
     const enter = still ? 1 : ramp(progress, index * 0.04, 0.15 + index * 0.04);
     part.style.opacity = String(enter * exit);
-    part.style.transform = `translate3d(${(1 - enter) * (index ? 22 : -22)}px, ${-8 * (1 - exit)}px, 0)`;
+    part.style.transform = `translate3d(${(1 - enter) * (index ? 22 : -22)}px, ${still ? 0 : -8 * (1 - exit)}px, 0)`;
   });
   const caption = scene.querySelector('.scene__content p');
   const captionEnter = still ? 1 : ramp(progress, 0.18, 0.28);
   caption.style.opacity = String(captionEnter * exit);
-  caption.style.transform = `translateY(${(1 - captionEnter) * 10 - (1 - exit) * 8}px)`;
+  caption.style.transform = `translateY(${still ? 0 : (1 - captionEnter) * 10 - (1 - exit) * 8}px)`;
   scene.querySelectorAll('.scene__eyebrow, .scroll-cue, .replay').forEach((item) => {
     item.style.opacity = String(exit);
     item.style.visibility = exit === 0 ? 'hidden' : 'visible';
