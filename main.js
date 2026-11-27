@@ -9,6 +9,46 @@ const MAX_TRANSITION_PX = 140;
 let scheduled = false;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const ramp = (progress, start, end) => {
+  const t = clamp((progress - start) / (end - start), 0, 1);
+  return t * t * (3 - 2 * t);
+};
+
+// Two meaningful title phrases, retaining the heading's accessible text and line break.
+scenes.forEach((scene) => {
+  const heading = scene.querySelector('h1, h2');
+  const firstPhrase = document.createElement('span');
+  firstPhrase.className = 'title-part';
+  firstPhrase.textContent = heading.firstChild.textContent;
+  heading.firstChild.replaceWith(firstPhrase);
+  heading.querySelector('em').classList.add('title-part');
+});
+
+function updateText(scene, progress, closingProgress) {
+  const still = reducedMotion.matches;
+  const exit = still ? 1 : 1 - ramp(progress, 0.76, 0.94);
+  scene.querySelectorAll('.title-part').forEach((part, index) => {
+    const enter = still ? 1 : ramp(progress, index * 0.04, 0.15 + index * 0.04);
+    part.style.opacity = String(enter * exit);
+    part.style.transform = `translate3d(${(1 - enter) * (index ? 22 : -22)}px, ${-8 * (1 - exit)}px, 0)`;
+  });
+  const caption = scene.querySelector('.scene__content p');
+  const captionEnter = still ? 1 : ramp(progress, 0.18, 0.28);
+  caption.style.opacity = String(captionEnter * exit);
+  caption.style.transform = `translateY(${(1 - captionEnter) * 10 - (1 - exit) * 8}px)`;
+  scene.querySelectorAll('.scene__eyebrow, .scroll-cue, .replay').forEach((item) => {
+    item.style.opacity = String(exit);
+    item.style.visibility = exit === 0 ? 'hidden' : 'visible';
+  });
+  const credit = scene.querySelector('.creator-credit');
+  if (credit) {
+    const reveal = still ? (closingProgress > 0 ? 1 : 0) : ramp(closingProgress, 0, 1);
+    credit.style.opacity = String(reveal);
+    credit.style.transform = `translateY(${still ? 0 : (1 - reveal) * 12}px)`;
+    credit.style.visibility = reveal > 0 ? 'visible' : 'hidden';
+    credit.tabIndex = reveal > 0 ? 0 : -1;
+  }
+}
 
 function layoutScenes() {
   const viewport = window.innerHeight;
@@ -24,7 +64,8 @@ function layoutScenes() {
 
     scene.dataset.scrubDistance = String(scrubDistance);
     scene.dataset.transitionDistance = String(transitionDistance);
-    scene.style.height = `${scrubDistance + transitionDistance}px`;
+    // A short closing scroll reveals the credit after the final video frame.
+    scene.style.height = `${scrubDistance + transitionDistance + (index === scenes.length - 1 ? 180 : 0)}px`;
   });
 }
 
@@ -76,6 +117,9 @@ function update() {
     scene.style.setProperty('--scene-opacity', String(opacity));
     scene.classList.toggle('is-visible', isCurrent || isNext);
     scene.classList.toggle('is-active', isCurrent);
+    const sceneProgress = clamp((y - scene.offsetTop) / Number(scene.dataset.scrubDistance), 0, 1);
+    const closingProgress = clamp((y - scene.offsetTop - Number(scene.dataset.scrubDistance)) / 180, 0, 1);
+    updateText(scene, sceneProgress, closingProgress);
   });
 
   nav.forEach((link) => {
